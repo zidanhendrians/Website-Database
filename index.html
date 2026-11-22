@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrasi dan Login</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 320px;
+            box-shadow: 0 4px 15px #0002;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 6px;
+            background: #16a34a;
+            color: white;
+            cursor: pointer;
+        }
+
+        .secondary {
+            background: #2563eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #pesan {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div id="formLogin">
+        <h2>Login User</h2>
+
+        <input type="email" id="emailLogin"
+               placeholder="Masukkan Email">
+
+        <input type="password" id="passwordLogin"
+               placeholder="Masukkan Password">
+
+        <button onclick="login()">Login</button>
+
+        <button class="secondary"
+                onclick="tampilRegister()">
+            Belum punya akun? Registrasi
+        </button>
+    </div>
+
+    <div id="formRegister" class="hidden">
+        <h2>Registrasi User</h2>
+
+        <input type="text" id="nama"
+               placeholder="Nama Lengkap">
+
+        <input type="email" id="emailRegister"
+               placeholder="Email">
+
+        <input type="password" id="passwordRegister"
+               placeholder="Password (minimal 6 karakter)">
+
+        <button onclick="register()">Daftar</button>
+
+        <button class="secondary"
+                onclick="tampilLogin()">
+            Sudah punya akun? Login
+        </button>
+    </div>
+
+    <div id="dashboard" class="hidden">
+        <h2>Selamat Datang!</h2>
+
+        <p id="namaUser"></p>
+        <p id="emailUser"></p>
+
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <p id="pesan"></p>
+
+</div>
+
+<script>
+
+// 1. Koneksi database Supabase
+
+const SUPABASE_URL = "MASUKKAN_PROJECT_URL";
+const SUPABASE_KEY = "MASUKKAN_PUBLISHABLE_KEY";
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL, sb_publishable_Tn1QCRNrJTo07dWEzz9tzA_gFvsC-3N
+);
+
+// 2. Menampilkan form registrasi
+
+function tampilRegister() {
+    document.getElementById("formLogin").classList.add("hidden");
+    document.getElementById("formRegister").classList.remove("hidden");
+    document.getElementById("pesan").innerText = "";
+}
+
+// 3. Menampilkan form login
+
+function tampilLogin() {
+    document.getElementById("formRegister").classList.add("hidden");
+    document.getElementById("formLogin").classList.remove("hidden");
+    document.getElementById("pesan").innerText = "";
+}
+
+// 4. Fungsi registrasi user
+
+async function register() {
+
+    const nama = document.getElementById("nama").value.trim();
+    const email = document.getElementById("emailRegister").value.trim();
+    const password = document.getElementById("passwordRegister").value;
+
+    if (!nama || !email || !password) {
+        pesan("Semua kolom harus diisi!");
+        return;
+    }
+
+    if (password.length < 6) {
+        pesan("Password minimal 6 karakter!");
+        return;
+    }
+
+    const { data, error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+            data: {
+                nama_lengkap: nama
+            }
+        }
+    });
+
+    if (error) {
+        pesan(error.message);
+        return;
+    }
+
+    pesan("Registrasi berhasil! Periksa email untuk verifikasi jika diminta.");
+}
+
+// 5. Fungsi login user
+
+async function login() {
+
+    const email = document.getElementById("emailLogin").value.trim();
+    const password = document.getElementById("passwordLogin").value;
+
+    if (!email || !password) {
+        pesan("Email dan password harus diisi!");
+        return;
+    }
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    if (error) {
+        pesan("Login gagal: " + error.message);
+        return;
+    }
+
+    tampilDashboard(data.user);
+}
+
+// 6. Menampilkan dashboard
+
+function tampilDashboard(user) {
+
+    document.getElementById("formLogin").classList.add("hidden");
+    document.getElementById("formRegister").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+
+    const nama = user.user_metadata?.nama_lengkap || "Pengguna";
+
+    document.getElementById("namaUser").innerText =
+        "Nama: " + nama;
+
+    document.getElementById("emailUser").innerText =
+        "Email: " + user.email;
+
+    pesan("");
+}
+
+// 7. Fungsi logout
+
+async function logout() {
+
+    const { error } = await supabaseClient.auth.signOut();
+
+    if (error) {
+        pesan(error.message);
+        return;
+    }
+
+    tampilLogin();
+    pesan("Berhasil logout!");
+}
+
+// 8. Menampilkan pesan
+
+function pesan(teks) {
+    document.getElementById("pesan").innerText = teks;
+}
+
+// 9. Memeriksa sesi login saat halaman dibuka
+
+async function cekLogin() {
+
+    const { data } = await supabaseClient.auth.getSession();
+
+    if (data.session) {
+        tampilDashboard(data.session.user);
+    }
+}
+
+cekLogin();
+
+// Memantau perubahan status login
+
+supabaseClient.auth.onAuthStateChange((event, session) => {
+
+    if (session) {
+        tampilDashboard(session.user);
+    } else {
+        document.getElementById("dashboard").classList.add("hidden");
+        document.getElementById("formRegister").classList.add("hidden");
+        document.getElementById("formLogin").classList.remove("hidden");
+    }
+
+});
+
+</script>
+
+</body>
+</html>
